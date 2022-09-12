@@ -1,35 +1,33 @@
-const movies = [
-  {
-    id: 1,
-    title: "Citizen Kane",
-    director: "Orson Wells",
-    year: "1941",
-    colors: false,
-    duration: 120,
-  },
-  {
-    id: 2,
-    title: "The Godfather",
-    director: "Francis Ford Coppola",
-    year: "1972",
-    colors: true,
-    duration: 180,
-  },
-  {
-    id: 3,
-    title: "Pulp Fiction",
-    director: "Quentin Tarantino",
-    year: "1994",
-    color: true,
-    duration: 180,
-  },
-];
-
 const database = require("./database");
 
 const getMovies = (req, res) => {
+  const initialSql = "select * from movies";
+  const where = [];
+
+  if (req.query.color != null) {
+    where.push({
+      column: "color",
+      value: req.query.color,
+      operator: "=",
+    });
+  }
+  if (req.query.max_duration != null) {
+    where.push({
+      column: "duration",
+      value: req.query.max_duration,
+      operator: "<=",
+    });
+  }
+
   database
-    .query("select * from movies")
+    .query(
+      where.reduce(
+        (sql, { column, operator }, index) =>
+          `${sql} ${index === 0 ? "where" : "and"} ${column} ${operator} ?`,
+        initialSql
+      ),
+      where.map(({ value }) => value)
+    )
     .then(([movies]) => {
       res.json(movies);
     })
@@ -87,7 +85,7 @@ const updateMovie = (req, res) => {
       if (result.affectedRows === 0) {
         res.status(404).send("Not Found");
       } else {
-        res.sendStatus(204).send("gg");
+        res.sendStatus(204);
       }
     })
     .catch((err) => {
@@ -100,9 +98,7 @@ const deleteMovie = (req, res) => {
   const id = parseInt(req.params.id);
 
   database
-
     .query("delete from movies where id = ?", [id])
-
     .then(([result]) => {
       if (result.affectedRows === 0) {
         res.status(404).send("Not Found");
@@ -121,5 +117,5 @@ module.exports = {
   getMovieById,
   postMovie,
   updateMovie,
-  deleteMovie
+  deleteMovie,
 };
